@@ -1,118 +1,73 @@
 import numpy as np
-from src.utils import sigmoide, tangente_hiperbolica
 
 
-class RedeNeuralRecorrente:
-    def __init__(self, tamanho_da_entrada, tamanho_das_camadas_ocultas, tamanho_da_saida):
-        # Pesos inicializados com valores aleatórios e pequenos
-        self.Wxh = np.random.randn(tamanho_das_camadas_ocultas, tamanho_da_entrada) * 0.01
-        self.Whh = np.random.randn(tamanho_das_camadas_ocultas, tamanho_das_camadas_ocultas) * 0.01
-        self.Why = np.random.randn(tamanho_da_saida, tamanho_das_camadas_ocultas) * 0.01
+class RNN:
+    def __init__(self, input_size, hidden_size, output_size, learning_rate=0.01):
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.learning_rate = learning_rate
 
-        # Bias inicializados com zero
-        self.bias_oculta = np.zeros((tamanho_das_camadas_ocultas, 1))
-        self.bias_saida = np.zeros((tamanho_da_saida, 1))
+        # Pesos e bias
+        self.Wxh = np.random.randn(hidden_size, input_size) * 0.01
+        self.Whh = np.random.randn(hidden_size, hidden_size) * 0.01
+        self.Why = np.random.randn(output_size, hidden_size) * 0.01
+        self.bh = np.zeros((hidden_size, 1))
+        self.by = np.zeros((output_size, 1))
 
-    def forward(self, entrada):
-        self.entrada = entrada
-        self.oculta = {0: np.zeros((self.Wxh.shape[0], 1))}
+    def forward(self, inputs):
+        h = np.zeros((self.hidden_size, 1))
+        outputs = []
 
-        saida = {}
-        for t in range(1, len(entrada) + 1):
-            self.oculta[t] = tangente_hiperbolica(
-                np.dot(self.Wxh, entrada[t - 1]) +
-                np.dot(self.Whh, self.oculta[t - 1]) +
-                self.bias_oculta
-            )
-            y_pred = sigmoide(
-                np.dot(self.Why, self.oculta[t]) +
-                self.bias_saida
-            )
-            saida[t] = y_pred
+        for i in range(len(inputs)):
+            h = np.tanh(np.dot(self.Wxh, inputs[i]) + np.dot(self.Whh, h) + self.bh)
+            y = np.dot(self.Why, h) + self.by
+            outputs.append(y)
+        return outputs, h
 
-        return saida
+    def backward(self, inputs, outputs, targets, h_last):
+        dWxh, dWhh, dWhy = np.zeros_like(self.Wxh), np.zeros_like(self.Whh), np.zeros_like(self.Why)
+        dbh, dby = np.zeros_like(self.bh), np.zeros_like(self.by)
+        dhnext = np.zeros_like(h_last)
 
-    def backward(self, saida, targets, taxa_de_aprendizado=0.001):
-        # Inicializa os gradientes (as derivadas)  e os bias com zero
-        d_Wxh = np.zeros_like(self.Wxh)
-        d_Whh = np.zeros_like(self.Whh)
-        d_Why = np.zeros_like(self.Why)
-        d_bias_oculta = np.zeros_like(self.bias_oculta)
-        d_bias_saida = np.zeros_like(self.bias_saida)
-        d_oculta_proxima = np.zeros_like(self.oculta[0])
+        for t in reversed(range(len(inputs))):
+            dy = outputs[t] - targets[t]
+            dWhy += np.dot(dy, h_last.T)
+            dby += dy
+            dh = np.dot(self.Why.T, dy) + dhnext
+            dhraw = (1 - h_last * h_last) * dh
+            dbh += dhraw
+            dWxh += np.dot(dhraw, inputs[t].T)
+            dWhh += np.dot(dhraw, h_last.T)
+            dhnext = np.dot(self.Whh.T, dhraw)
+        return dWxh, dWhh, dWhy, dbh, dby
 
-        # Realiza a retropropagação
-        for t in reversed(range(1, len(saida) + 1)):
-            d_saida = saida[t] - targets[t - 1]
-            d_Why += np.dot(d_saida, self.oculta[t].T)
-            d_bias_saida += d_saida
-            d_oculta = np.dot(self.Why.T, d_saida) + d_oculta_proxima
-            d_tanh = (1 - self.oculta[t] * self.oculta[t]) * d_oculta
-            d_bias_oculta += d_tanh
-            d_Wxh += np.dot(d_tanh, self.entrada[t - 1].T)
-            d_Whh += np.dot(d_tanh, self.oculta[t - 1].T)
-            d_oculta_proxima = np.dot(self.Whh.T, d_tanh)
+    def update(self, dWxh, dWhh, dWhy, dbh, dby):
+        self.Wxh -= self.learning_rate * dWxh
+        self.Whh -= self.learning_rate * dWhh
+        self.Why -= self.learning_rate * dWhy
+        self.bh -= self.learning_rate * dbh
+        self.by -= self.learning_rate * dby
 
-        # Esse passo evita que os gradientes explodam
-        # Limita os gradientes no intervalo [-5, 5]
-        for d_param in [d_Wxh, d_Whh, d_Why, d_bias_oculta, d_bias_saida]:
-            np.clip(d_param, -5, 5, out=d_param)
+    def train(self, data, epochs):
+        for epoch in range(epochs):
+            inputs = [np.array([[i]]) for i in data[:-1]]
+            targets = [np.array([[i]]) for i in data[1:]]
+            outputs, h_last = self.forward(inputs)
+            dWxh, dWhh, dWhy, dbh, dby = self.backward(inputs, outputs, targets, h_last)
+            self.update(dWxh, dWhh, dWhy, dbh, dby)
 
-        # Atualiza os pesos e os bias
-        self.Wxh -= taxa_de_aprendizado * d_Wxh
-        self.Whh -= taxa_de_aprendizado * d_Whh
-        self.Why -= taxa_de_aprendizado * d_Why
-        self.bias_oculta -= taxa_de_aprendizado * d_bias_oculta
-        self.bias_saida -= taxa_de_aprendizado * d_bias_saida
+    def predict_next(self, data):
+        inputs = [np.array([[i]]) for i in data]
+        outputs, _ = self.forward(inputs)
+        return outputs[-1][0, 0]
 
 
 if __name__ == "__main__":
-    # Dados de exemplo
-    dados_de_entrada = [np.array([[i]]) for i in [0.5, 0.6, 0.7, 0.8]]
-    targets = [np.array([[i]]) for i in [0.6, 0.7, 0.8, 0.9]]
+    data = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+    print(data)
+    rnn = RNN(input_size=1, hidden_size=10, output_size=1, learning_rate=0.01)
+    rnn.train(data, epochs=100)
+    prediction = rnn.predict_next(data[-10:])
+    print("Valor previsto:", prediction)
 
-    # Cria a RNN
-    rnn = RedeNeuralRecorrente(tamanho_da_entrada=1,
-                               tamanho_das_camadas_ocultas=10,
-                               tamanho_da_saida=1)
-
-    # Treina a RNN
-    epocas = 10000
-    for epoca in range(epocas):
-        saidas = rnn.forward(dados_de_entrada)
-        rnn.backward(saidas, targets)
-
-    # Realiza a predição
-    saidas = rnn.forward(dados_de_entrada)
-    print('Valor esperado\t\tValor Obtido')
-    for i, target in enumerate(targets):
-        print(f'{target[0][0]} \t\t\t\t {[o[0][0] for o in saidas.values()][i]}')
-
-#
-# # Mudando o tamanho da entrada
-# dados = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-# entrada = [np.array([[dados[i], dados[i+1]]]).T for i in range(len(dados) - 2)]
-# targets = [np.array([[dados[i+2]]]) for i in range(len(dados) - 2)]
-#
-# # Inicializando a RNN
-# rnn = RedeNeuralRecorrente(tamanho_da_entrada=2,
-#                            tamanho_das_camadas_ocultas=10,
-#                            tamanho_da_saida=1)
-#
-# # Treina a RNN
-# epocas = 10000
-# for epoca in range(epocas):
-#     saidas = rnn.forward(dados)
-#     rnn.backward(saidas, targets)
-#
-#
-# def preve_proximo_dia(rnn, dados_de_dois_dias):
-#     inputs = np.array([dados_de_dois_dias]).T
-#     outputs = rnn.forward([inputs])
-#     return outputs[len(outputs)][0][0]
-#
-#
-# # Prevê o terceiro dia baseado nos dois dias anteriores
-# dados_de_dois_dias = [0.5, 0.6]
-# previsao_do_terceiro_dias = preve_proximo_dia(rnn, dados_de_dois_dias)
-# print(previsao_do_terceiro_dias)

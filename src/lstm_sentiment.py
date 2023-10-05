@@ -1,5 +1,3 @@
-import numpy as np
-import tensorflow as tf
 from keras.models import Sequential
 from keras.layers import LSTM, Embedding, Dense
 from keras.datasets import imdb

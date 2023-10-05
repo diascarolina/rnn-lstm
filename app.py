@@ -1,17 +1,16 @@
 import streamlit as st
+from src.rnn import RNN
 
 
 def app():
     st.sidebar.title("RNNs e LSTMs")
 
     option = st.sidebar.selectbox(
-                "Navegue por uma Opção",
-                ["Entendendo RNNs",
-                 "Prevendo a Bolsa de Valores com RNNs",
-                 "Entendendo LSTMs",
-                 "Prevendo a Bolsa de Valores com LSTMs",
-                 "Análise de Sentimento Textual com LSTMs"]
-            )
+        "Navegue por uma Opção",
+        ["Entendendo RNNs",
+         "Entendendo LSTMs",
+         "Análise de Sentimento Textual com LSTMs"]
+    )
 
     match option:
         case "Entendendo RNNs":
@@ -57,7 +56,8 @@ def app():
 
             st.code("class RedeNeuralRecorrente:")
 
-            st.write("Como toda rede neural, a RNN também precisa ter seus pesos e bias inicializados.")
+            st.write(
+                "Como toda rede neural, a RNN também precisa ter seus pesos e bias inicializados.")
 
             st.code("""
                 def __init__(self, tamanho_da_entrada, tamanho_das_camadas_ocultas, tamanho_da_saida):
@@ -168,6 +168,22 @@ def app():
             0.9 			0.7502071266961721
             """)
 
+            st.header("Testando a RNN")
+
+            data_input = st.text_area("Digite os dados de treino separados por vírgula:",
+                                      "0.4, 0.5, 0.6, 0.7, 0.8")
+
+            try:
+                data = [float(item) for item in data_input.split(',')]
+                rnn = RNN(input_size=1, hidden_size=10, output_size=1, learning_rate=0.001)
+                if st.button('Prever Valor'):
+                    rnn.train(data, epochs=1000)
+                    prediction = rnn.predict_next(data[-10:])
+                    st.write("Valor previsto:", prediction)
+
+            except ValueError:
+                st.write("Dados inválidos, digite apenas valores separados por vírgula.")
+
             st.header("O Problema.")
 
             st.subheader("Vanishing/Exploding Gradient")
@@ -208,9 +224,6 @@ def app():
             dependências de longo prazo ao prevenir contra o problema de vanishing gradient.
             """)
 
-        case "Prevendo a Bolsa de Valores com RNNs":
-            st.title(option)
-
         case "Entendendo LSTMs":
             st.title(option)
 
@@ -232,9 +245,6 @@ def app():
             st.code("""
             
             """)
-
-        case "Prevendo a Bolsa de Valores com LSTMs":
-            st.title(option)
 
         case "Análise de Sentimento Textual com LSTMs":
             st.title(option)
@@ -264,111 +274,3 @@ def app():
 
 if __name__ == "__main__":
     app()
-
-
-
-
-#
-#     elif option == "Data Preparation":
-#         st.header("Data Preparation")
-#         st.write("1. Tokenize the text data.")
-#         st.write("2. Pad sequences to ensure uniform length.")
-#         st.code("""
-#         tokenizer = Tokenizer(num_words=5000)
-#         tokenizer.fit_on_texts(texts)
-#         sequences = tokenizer.texts_to_sequences(texts)
-#         data = pad_sequences(sequences, maxlen=100)
-#         """, language='python')
-#         # Sample chart for token distribution
-#         token_distr = {
-#             "love": 120, "bad": 50, "great": 80, "good": 110,
-#         }
-#         fig = go.Figure(data=[go.Bar(x=list(token_distr.keys()), y=list(token_distr.values()))])
-#         fig.update_layout(title="Sample Token Distribution")
-#         st.plotly_chart(fig)
-#
-#     elif option == "LSTM Model":
-#         st.header("LSTM Model Building")
-#         st.write("Construct the LSTM model:")
-#         st.write("1. Add an embedding layer.")
-#         st.write("2. Add one or more LSTM layers.")
-#         st.write("3. Add a dense layer for prediction.")
-#         st.code("""
-#         model = Sequential()
-#         model.add(Embedding(input_dim=5000, output_dim=embedding_dim, input_length=100))
-#         model.add(LSTM(32, dropout=0.2, recurrent_dropout=0.2))
-#         model.add(Dense(1, activation='sigmoid'))
-#         """, language='python')
-#         # Sample LSTM cell diagram
-#         st.image("path_to_lstm_diagram.png", caption="LSTM Cell Diagram", use_column_width=True)
-#
-#     elif option == "Training":
-#         st.header("Training")
-#         st.write("Train the LSTM model using backpropagation through time.")
-#         st.code("""
-#         model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-#         model.fit(data, labels, epochs=10, validation_split=0.2, batch_size=32)
-#         """, language='python')
-#         # Sample training loss chart
-#         epochs = list(range(1, 11))
-#         training_loss = [0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.28, 0.25, 0.22, 0.2]
-#         validation_loss = [0.55, 0.51, 0.48, 0.43, 0.39, 0.37, 0.34, 0.32, 0.3, 0.29]
-#         fig = go.Figure()
-#         fig.add_trace(go.Scatter(x=epochs, y=training_loss, mode='lines+markers', name='Training Loss'))
-#         fig.add_trace(go.Scatter(x=epochs, y=validation_loss, mode='lines+markers', name='Validation Loss'))
-#         fig.update_layout(title="Training vs Validation Loss over Epochs")
-#         st.plotly_chart(fig)
-#
-#     elif option == "Prediction":
-#         st.header("Prediction")
-#         st.write("Use the trained LSTM model to make predictions on new data.")
-#         st.code("""
-#         predictions = model.predict(new_data)
-#         """, language='python')
-#         # Sample predictions chart
-#         texts = ["I love this", "Feels bad", "So good"]
-#         sentiment = [0.85, 0.2, 0.8]
-#         fig = go.Figure(data=[go.Bar(x=texts, y=sentiment)])
-#         fig.update_layout(title="Sample Sentiment Predictions")
-#         st.plotly_chart(fig)
-#
-#         """### gif from local file"""
-#         file_ = open("media/videos/main/480p15/CreateCircle_ManimCE_v0.17.3.gif", "rb")
-#         contents = file_.read()
-#         data_url = base64.b64encode(contents).decode("utf-8")
-#         file_.close()
-#
-#         st.markdown(
-#             f'<img src="data:image/gif;base64,{data_url}" alt="cat gif">',
-#             unsafe_allow_html=True,
-#         )
-#
-# # Textbox for user to enter their data points
-# data_input = st.text_area("Enter your data points (comma-separated):", '0.5, 0.6, 0.7, 0.8, 0.85')
-#
-# try:
-#     # Convert string input to list of floats
-#     data = [float(item) for item in data_input.split(',')]
-#
-#     # Train the LSTM if the data has changed
-#     if len(data) > 1:
-#         inputs = [data[i] for i in range(len(data) - 1)]
-#         targets = [data[i + 1] for i in range(len(data) - 1)]
-#
-#         for _ in range(iterations):
-#             for inp, target in zip(inputs, targets):
-#                 lstm.forward(np.array([[inp]]))
-#                 lstm.backward(np.array([[target]]), learning_rate)
-#
-#         predicted = lstm.forward(np.array([[val] for val in data[:-1]]))
-#         st.write(f"Predicted next value: {predicted[len(data) - 2][0][0]}")
-#
-#     else:
-#         st.write("Please input more data points.")
-#
-# except ValueError:
-#     st.write("Invalid input. Please enter comma-separated numbers only.")
-#
-# # Run the app
-# if __name__ == '__main__':
-#     st.button('Predict Next Value')
