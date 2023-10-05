@@ -1,13 +1,11 @@
 import streamlit as st
-import base64
-import plotly.graph_objects as go
 
 
 def app():
-    st.title("Entendendo Redes Neurais Recorrentes (RNNs)")
+    st.sidebar.title("RNNs e LSTMs")
 
     option = st.sidebar.selectbox(
-                "Escolha uma Opção",
+                "Navegue por uma Opção",
                 ["Entendendo RNNs",
                  "Prevendo a Bolsa de Valores com RNNs",
                  "Entendendo LSTMs",
@@ -17,10 +15,11 @@ def app():
 
     match option:
         case "Entendendo RNNs":
+            st.title(option)
             st.write("""
-            \"Nossa, como eu queria conseguir prever os preços da bolsa de valores e ficar rico com isso!\"
+            ### \"Nossa, como eu queria conseguir prever os preços da bolsa de valores e ficar rico com isso!\"
             \n
-            \"Já sei, vou criar uma rede neural pra isso!\"
+            ### \"Já sei, vou criar uma rede neural pra isso!\"
             """)
 
             st.write("""
@@ -174,13 +173,46 @@ def app():
             st.subheader("Vanishing/Exploding Gradient")
 
             st.write("""
-            [explicar aqui]
+            Redes Neurais Recorrentes (RNNs) são conhecidas por terem problemas durante o
+            treinamento devido aos gradientes que podem desaparecer ("vanish") ou
+            explodir ("explode"). Este problema é amplamente observado quando a rede é treinada
+            usando o método de Backpropagation Through Time (BPTT).
+            
+            1. **Vanishing Gradient (Gradiente Desvanecendo/"Sumindo")**:
+               - Quando RNNs são treinadas, os gradientes dos passos de tempo posteriores são
+               multiplicados por vários pesos enquanto são propagados para os passos de tempo 
+               anteriores.
+               - Se esses pesos são pequenos (menores que 1), multiplicar repetidamente por eles
+               durante a propagação dos gradientes fará com que os gradientes se tornem 
+               extremamente pequenos.
+               - Como resultado, os pesos da rede não se atualizam efetivamente, fazendo com que
+               a rede não aprenda as dependências de longo prazo entre as sequências.
+               - Esse fenômeno é particularmente problemático em sequências mais longas (por 
+               exemplo, muitos dias sendo usados para prever a bolsa de valores).
+            
+            2. **Exploding Gradient (Gradiente "Explodindo")**:
+               - Por outro lado, se os pesos são grandes (maiores que 1),
+               multiplicar os gradientes por eles repetidamente durante a propagação fará com
+               que os gradientes cresçam exponencialmente.
+               - Estes gradientes muito grandes podem levar a pesos que se atualizam de forma
+               extremamente volátil, causando instabilidade na rede.
+               - Muitas vezes isso pode ser observado com valores nulos nos pesos ou na função de 
+               perda durante o treinamento.
+            
+            **Soluções**:
+            - Para o problema de gradientes "explodindo", um remédio comum é a técnica de "clipping 
+            gradients", onde gradientes que excedem um certo valor são cortados para limitar seu valor.
+            - O problema de gradientes desaparecendo é mais difícil de solucionar, mas uma das
+            abordagens é usar arquiteturas diferentes, como LSTM (Long Short-Term Memory)
+            ou GRU (Gated Recurrent Units), que são projetadas especificamente para lidar com
+            dependências de longo prazo ao prevenir contra o problema de vanishing gradient.
             """)
 
         case "Prevendo a Bolsa de Valores com RNNs":
-            pass
+            st.title(option)
 
         case "Entendendo LSTMs":
+            st.title(option)
 
             st.write("""
             Para mitigar o problema do vanishing/exploding gradients, surgiram as LSTMs...
@@ -202,10 +234,32 @@ def app():
             """)
 
         case "Prevendo a Bolsa de Valores com LSTMs":
-            pass
+            st.title(option)
 
         case "Análise de Sentimento Textual com LSTMs":
+            st.title(option)
 
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text(" ")
+    st.sidebar.text("""
+    Criado por
+    Carolina Dias &
+    Claúdio Fortier
+    2023
+    """)
 
 
 if __name__ == "__main__":
