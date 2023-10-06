@@ -5,159 +5,148 @@ def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 
-def dsigmoid(x):
-    return x * (1 - x)
+def dsigmoid(y):
+    return y * (1 - y)
 
 
-def tanh(x):
-    return np.tanh(x)
-
-
-def dtanh(x):
-    return 1.0 - x ** 2
+def tanh_derivative(y):
+    return 1 - y ** 2
 
 
 class LSTM:
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, hidden_size, output_size, learning_rate=0.01):
+        self.input_size = input_size
         self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.learning_rate = learning_rate
 
-        # Input gate weights and biases
-        self.Wi = np.random.randn(hidden_size, input_size + hidden_size) * 0.01
-        self.bi = np.zeros((hidden_size, 1))
-
-        # Forget gate weights and biases
-        self.Wf = np.random.randn(hidden_size, input_size + hidden_size) * 0.01
-        self.bf = np.zeros((hidden_size, 1))
-
-        # Output gate weights and biases
-        self.Wo = np.random.randn(hidden_size, input_size + hidden_size) * 0.01
-        self.bo = np.zeros((hidden_size, 1))
-
-        # Cell state weights and biases
-        self.Wc = np.random.randn(hidden_size, input_size + hidden_size) * 0.01
-        self.bc = np.zeros((hidden_size, 1))
-
-        # Output weights and biases
+        self.Wf = np.random.randn(hidden_size, hidden_size + input_size) * 0.01
+        self.Wi = np.random.randn(hidden_size, hidden_size + input_size) * 0.01
+        self.Wc = np.random.randn(hidden_size, hidden_size + input_size) * 0.01
+        self.Wo = np.random.randn(hidden_size, hidden_size + input_size) * 0.01
         self.Wy = np.random.randn(output_size, hidden_size) * 0.01
+
+        self.bf = np.zeros((hidden_size, 1))
+        self.bi = np.zeros((hidden_size, 1))
+        self.bc = np.zeros((hidden_size, 1))
+        self.bo = np.zeros((hidden_size, 1))
         self.by = np.zeros((output_size, 1))
 
     def forward(self, inputs):
-        self.inputs = inputs
-        self.z = {}
-        self.i = {}
-        self.f = {}
-        self.o = {}
-        self.c = {}
-        self.h = {}
-        self.y = {}
+        h_prev = np.zeros((self.hidden_size, 1))
+        c_prev = np.zeros((self.hidden_size, 1))
 
-        self.h[-1] = np.zeros((self.hidden_size, 1))
-        self.c[-1] = np.zeros((self.hidden_size, 1))
+        self.hiddens = [h_prev]
+        self.cells = [c_prev]
 
-        for t in range(len(inputs)):
-            self.z[t] = np.row_stack((self.h[t - 1], inputs[t]))
+        for x in inputs:
+            z = np.row_stack((h_prev, x))
+            f = sigmoid(np.dot(self.Wf, z) + self.bf)
+            i = sigmoid(np.dot(self.Wi, z) + self.bi)
+            c_bar = np.tanh(np.dot(self.Wc, z) + self.bc)
+            c = f * c_prev + i * c_bar
+            o = sigmoid(np.dot(self.Wo, z) + self.bo)
+            h = o * np.tanh(c)
 
-            # Input gate
-            self.i[t] = sigmoid(np.dot(self.Wi, self.z[t]) + self.bi)
+            h_prev, c_prev = h, c
+            self.hiddens.append(h)
+            self.cells.append(c)
 
-            # Forget gate
-            self.f[t] = sigmoid(np.dot(self.Wf, self.z[t]) + self.bf)
+        y = np.dot(self.Wy, h) + self.by
+        return y
 
-            # Output gate
-            self.o[t] = sigmoid(np.dot(self.Wo, self.z[t]) + self.bo)
+    def backward(self, inputs, output, target):
+        dh_next = np.zeros_like(self.hiddens[0])
+        dc_next = np.zeros_like(self.cells[0])
+        dWy = np.zeros_like(self.Wy)
+        dby = np.zeros_like(self.by)
+        dWf = np.zeros_like(self.Wf)
+        dWi = np.zeros_like(self.Wi)
+        dWc = np.zeros_like(self.Wc)
+        dWo = np.zeros_like(self.Wo)
+        dbf = np.zeros_like(self.bf)
+        dbi = np.zeros_like(self.bi)
+        dbc = np.zeros_like(self.bc)
+        dbo = np.zeros_like(self.bo)
 
-            # New cell information
-            self.c[t] = self.f[t] * self.c[t - 1] + self.i[t] * tanh(
-                np.dot(self.Wc, self.z[t]) + self.bc)
+        dy = output - target
+        dWy += np.dot(dy, self.hiddens[-1].T)
+        dby += dy
 
-            # Hidden state
-            self.h[t] = self.o[t] * tanh(self.c[t])
+        dh = np.dot(self.Wy.T, dy)
+        dh_next += dh
 
-            # Output
-            self.y[t] = np.dot(self.Wy, self.h[t]) + self.by
+        for t in reversed(range(len(inputs))):
+            z = np.row_stack((self.hiddens[t], inputs[t]))
+            c_prev = self.cells[t]
+            c = self.cells[t + 1]
+            h = self.hiddens[t + 1]
 
-        return self.y
+            do = dh_next * np.tanh(c)
+            dc = (dh_next * self.hiddens[-1] * tanh_derivative(np.tanh(c))) + dc_next
+            c_bar = dc * self.hiddens[t]
+            di = dc * c_prev
+            df = dc * c_prev
 
-    def backward(self, targets, learning_rate=0.01):
-        # Gradients initialization
-        dWi, dWf, dWo, dWc = np.zeros_like(self.Wi), np.zeros_like(self.Wf), np.zeros_like(
-            self.Wo), np.zeros_like(self.Wc)
-        dbi, dbf, dbo, dbc = np.zeros_like(self.bi), np.zeros_like(self.bf), np.zeros_like(
-            self.bo), np.zeros_like(self.bc)
-        dWy, dby = np.zeros_like(self.Wy), np.zeros_like(self.by)
+            dWo += np.dot(do * dsigmoid(self.hiddens[-1]), z.T)
+            dbo += do * dsigmoid(self.hiddens[-1])
 
-        dhnext, dcnext = np.zeros_like(self.h[0]), np.zeros_like(self.c[0])
+            dWc += np.dot(c_bar * tanh_derivative(c_bar), z.T)
+            dbc += c_bar * tanh_derivative(c_bar)
 
-        for t in reversed(range(len(targets))):
-            dy = self.y[t] - targets[t]
-            dWy += np.dot(dy, self.h[t].T)
-            dby += dy
+            dWi += np.dot(di * dsigmoid(self.hiddens[t]), z.T)
+            dbi += di * dsigmoid(self.hiddens[t])
 
-            dh = np.dot(self.Wy.T, dy) + dhnext
-            dc = dcnext + (dh * self.o[t] * dtanh(tanh(self.c[t])))
+            dWf += np.dot(df * dsigmoid(self.hiddens[t]), z.T)
+            dbf += df * dsigmoid(self.hiddens[t])
 
-            do = dh * tanh(self.c[t])
-            dWo += np.dot(do * dsigmoid(self.o[t]), self.z[t].T)
-            dbo += do * dsigmoid(self.o[t])
+            dz = (np.dot(self.Wf.T, df * dsigmoid(self.hiddens[t])) +
+                  np.dot(self.Wi.T, di * dsigmoid(self.hiddens[t])) +
+                  np.dot(self.Wc.T, c_bar * tanh_derivative(c_bar)) +
+                  np.dot(self.Wo.T, do * dsigmoid(self.hiddens[-1])))
 
-            df = dc * self.c[t - 1]
-            dWf += np.dot(df * dsigmoid(self.f[t]), self.z[t].T)
-            dbf += df * dsigmoid(self.f[t])
+            dh_next = dz[:self.hidden_size, :]
+            dc_next = self.hiddens[t] * dc
 
-            di = dc * tanh(np.dot(self.Wc, self.z[t]) + self.bc)
-            dWi += np.dot(di * dsigmoid(self.i[t]), self.z[t].T)
-            dbi += di * dsigmoid(self.i[t])
+        gradients = (dWy, dby, dWf, dbf, dWi, dbi, dWc, dbc, dWo, dbo)
+        return gradients
 
-            dc_bar = dc * self.i[t]
-            dWc += np.dot(dc_bar * dtanh(np.dot(self.Wc, self.z[t]) + self.bc), self.z[t].T)
-            dbc += dc_bar * dtanh(np.dot(self.Wc, self.z[t]) + self.bc)
+    def update(self, gradients):
+        dWy, dby, dWf, dbf, dWi, dbi, dWc, dbc, dWo, dbo = gradients
 
-            dz = (np.dot(self.Wi.T, di * dsigmoid(self.i[t])) +
-                  np.dot(self.Wf.T, df * dsigmoid(self.f[t])) +
-                  np.dot(self.Wo.T, do * dsigmoid(self.o[t])) +
-                  np.dot(self.Wc.T, dc_bar * dtanh(np.dot(self.Wc, self.z[t]) + self.bc)))
+        self.Wy -= self.learning_rate * dWy
+        self.by -= self.learning_rate * dby
 
-            dhnext = dz[:self.hidden_size, :]
-            dcnext = self.f[t] * dc
+        self.Wf -= self.learning_rate * dWf
+        self.bf -= self.learning_rate * dbf
 
-        for dparam in [dWi, dWf, dWo, dWc, dbi, dbf, dbo, dbc, dWy, dby]:
-            np.clip(dparam, -5, 5, out=dparam)  # clip to mitigate exploding gradients
+        self.Wi -= self.learning_rate * dWi
+        self.bi -= self.learning_rate * dbi
 
-        # Update weights and biases using gradient descent
-        self.Wi -= learning_rate * dWi
-        self.Wf -= learning_rate * dWf
-        self.Wo -= learning_rate * dWo
-        self.Wc -= learning_rate * dWc
-        self.bi -= learning_rate * dbi
-        self.bf -= learning_rate * dbf
-        self.bo -= learning_rate * dbo
-        self.bc -= learning_rate * dbc
-        self.Wy -= learning_rate * dWy
-        self.by -= learning_rate * dby
+        self.Wc -= self.learning_rate * dWc
+        self.bc -= self.learning_rate * dbc
+
+        self.Wo -= self.learning_rate * dWo
+        self.bo -= self.learning_rate * dbo
+
+    def train(self, data, epochs=10):
+        for epoch in range(epochs):
+            inputs = [np.array([[i]]) for i in data[:-1]]
+            target = np.array([[data[-1]]])
+            output = self.forward(inputs)
+            gradients = self.backward(inputs, output, target)
+            self.update(gradients)
+
+    def predict_next(self, data):
+        inputs = [np.array([[i]]) for i in data]
+        prediction = self.forward(inputs)
+        return prediction[0, 0]
 
 
-data = [0.5, 0.6, 0.7, 0.8, 0.85]
-
-inputs = [data[i] for i in range(len(data)-1)]
-targets = [data[i+1] for i in range(len(data)-1)]
-
-hidden_size = 5
-input_size = output_size = 1  # We are predicting a single value based on a single value
-
-lstm = LSTM(input_size, hidden_size, output_size)
-
-iterations = 10000
-learning_rate = 0.01
-
-for i in range(iterations):
-    total_loss = 0
-    for inp, target in zip(inputs, targets):
-        lstm.forward(np.array([[inp]]))  # forward pass
-        lstm.backward(np.array([[target]]), learning_rate)  # backward pass
-        total_loss += np.square(lstm.y[0] - target).item()  # MSE Loss for the last
-        # output
-    if i % 1000 == 0:
-        print(f"Iteration {i}, Loss: {total_loss/len(inputs)}")
-
-predicted = lstm.forward(np.array([[val] for val in data[:-1]]))
-print(f"Predicted next value: {predicted[len(data)-2]}")
+if __name__ == "__main__":
+    data = [0.4, 0.5, 0.6, 0.7, 0.8]
+    print(data)
+    lstm = LSTM(input_size=1, hidden_size=10, output_size=1, learning_rate=0.01)
+    lstm.train(data, epochs=100)
+    prediction = lstm.predict_next(data[-10:])
+    print("Next predicted value:", prediction)
