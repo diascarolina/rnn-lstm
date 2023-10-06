@@ -149,4 +149,4 @@ if __name__ == "__main__":
     lstm = LSTM(input_size=1, hidden_size=10, output_size=1, learning_rate=0.01)
     lstm.train(data, epochs=100)
     prediction = lstm.predict_next(data[-10:])
-    print("Next predicted value:", prediction)
+    print("Valor previsto:", prediction)

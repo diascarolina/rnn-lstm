@@ -392,7 +392,7 @@ def app():
             st.subheader("Análise de sentimentos")
 
             sample_review = st.text_area("O que você achou do filme?",
-                                      "It was perfect!")
+                                         "It was perfect!")
 
             try:
                 model = load_model("src/improved_sentiment_analysis_model.h5")
