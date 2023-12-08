@@ -1,5 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/Users/carolinadias/Documents/rnn-lstm/media/videos/scene/480p15/partial_movie_files/LSTMAnimation/4266129954_3723711530_223132457.mp4'
-file 'file:/Users/carolinadias/Documents/rnn-lstm/media/videos/scene/480p15/partial_movie_files/LSTMAnimation/1442284246_3634714645_1927153104.mp4'
-file 'file:/Users/carolinadias/Documents/rnn-lstm/media/videos/scene/480p15/partial_movie_files/LSTMAnimation/1442284246_1076466279_2468768097.mp4'
-file 'file:/Users/carolinadias/Documents/rnn-lstm/media/videos/scene/480p15/partial_movie_files/LSTMAnimation/1442284246_2144679784_2428512411.mp4'
